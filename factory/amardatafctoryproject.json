@@ -1,0 +1,9 @@
+{
+	"name": "amardatafctoryproject",
+	"location": "westus2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "265cb618-67bd-458d-9810-bcc7cfd5aae7",
+		"tenantId": "aaaaef17-acd4-49a6-b1be-c533f9783610"
+	}
+}

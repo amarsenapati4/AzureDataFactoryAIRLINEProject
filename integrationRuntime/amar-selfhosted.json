@@ -1,0 +1,6 @@
+{
+	"name": "amar-selfhosted",
+	"properties": {
+		"type": "SelfHosted"
+	}
+}

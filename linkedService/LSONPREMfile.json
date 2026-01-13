@@ -1,0 +1,17 @@
+{
+	"name": "LSONPREMfile",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "FileServer",
+		"typeProperties": {
+			"host": "C:\\amarkishorefiles",
+			"userId": "rajashreesenapati4@gmail.com",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiI4MTk1Mzc1Ny04YmE4LTQ5MjUtYTY2Ny04MzY1NTE3Y2JmYjciLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "amar-selfhosted",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

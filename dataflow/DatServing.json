@@ -1,0 +1,254 @@
+{
+	"name": "DatServing",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "DimAirline"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "DimFlight"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "FactBookings"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sinkTotalTicketcost"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_datalake",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sinkTotalrevenueGenratedbyEachFlight"
+				}
+			],
+			"transformations": [
+				{
+					"name": "AirlineJoin"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "aggregateAirline"
+				},
+				{
+					"name": "Ranking"
+				},
+				{
+					"name": "filterTop5"
+				},
+				{
+					"name": "joinFlight"
+				},
+				{
+					"name": "selectColoumns"
+				},
+				{
+					"name": "TotalPassengerByEachFlight"
+				},
+				{
+					"name": "TotalRevenue"
+				},
+				{
+					"name": "RankingFlight"
+				},
+				{
+					"name": "Top5performingFlight"
+				},
+				{
+					"name": "AggreGateToGetFlightName"
+				},
+				{
+					"name": "SelectFlightName"
+				},
+				{
+					"name": "alterRow1"
+				},
+				{
+					"name": "alterRow2"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          airline_id as short,",
+				"          airline_name as string,",
+				"          country as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimAirline') ~> DimAirline",
+				"source(output(",
+				"          flight_id as short,",
+				"          flight_number as string,",
+				"          departure_time_stamps as string,",
+				"          arrival_timestamps as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'DimFlight') ~> DimFlight",
+				"source(output(",
+				"          booking_id as integer,",
+				"          passenger_id as integer,",
+				"          flight_id as integer,",
+				"          airline_id as integer,",
+				"          origin_airport_id as integer,",
+				"          destination_airport_id as integer,",
+				"          booking_date as date,",
+				"          ticket_cost as integer,",
+				"          flight_duration_mins as integer,",
+				"          checkin_status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'silver',",
+				"     folderPath: 'FactBookings') ~> FactBookings",
+				"FactBookings, DimAirline join(FactBookings@airline_id == DimAirline@airline_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> AirlineJoin",
+				"AirlineJoin select(mapColumn(",
+				"          booking_id,",
+				"          passenger_id,",
+				"          flight_id,",
+				"          airline_id = FactBookings@airline_id,",
+				"          origin_airport_id,",
+				"          destination_airport_id,",
+				"          booking_date,",
+				"          ticket_cost,",
+				"          flight_duration_mins,",
+				"          checkin_status,",
+				"          airline_name,",
+				"          country",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"selectColumns aggregate(groupBy(airline_name),",
+				"     Total_ticket_cost_per_flight = sum(ticket_cost)) ~> aggregateAirline",
+				"aggregateAirline window(desc(Total_ticket_cost_per_flight, true),",
+				"     Top_Sales = denseRank()) ~> Ranking",
+				"Ranking filter(Top_Sales <= 5) ~> filterTop5",
+				"DimFlight, FactBookings join(DimFlight@flight_id == FactBookings@flight_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joinFlight",
+				"joinFlight select(mapColumn(",
+				"          flight_number,",
+				"          departure_time_stamps,",
+				"          arrival_timestamps,",
+				"          booking_id,",
+				"          passenger_id,",
+				"          flight_id = FactBookings@flight_id,",
+				"          airline_id,",
+				"          origin_airport_id,",
+				"          destination_airport_id,",
+				"          booking_date,",
+				"          ticket_cost,",
+				"          flight_duration_mins,",
+				"          checkin_status",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColoumns",
+				"selectColoumns aggregate(groupBy(flight_number,",
+				"          flight_id,",
+				"          ticket_cost,",
+				"          airline_id),",
+				"     Total_Passenger = sum(passenger_id)) ~> TotalPassengerByEachFlight",
+				"TotalPassengerByEachFlight aggregate(groupBy(flight_number,",
+				"          flight_id,",
+				"          airline_id),",
+				"     Total_Revenue = sum(Total_Passenger * ticket_cost)) ~> TotalRevenue",
+				"TotalRevenue window(desc(Total_Revenue, true),",
+				"     TopPerformingFlight = denseRank()) ~> RankingFlight",
+				"RankingFlight filter(TopPerformingFlight<=5) ~> Top5performingFlight",
+				"Top5performingFlight, DimAirline join(TotalRevenue@airline_id == DimAirline@airline_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> AggreGateToGetFlightName",
+				"AggreGateToGetFlightName select(mapColumn(",
+				"          flight_id,",
+				"          flight_number,",
+				"          airline_name,",
+				"          airline_id = TotalRevenue@airline_id,",
+				"          country,",
+				"          Total_Revenue,",
+				"          FlightRanking = TopPerformingFlight",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectFlightName",
+				"filterTop5 alterRow(insertIf(1==1)) ~> alterRow1",
+				"SelectFlightName alterRow(insertIf(1==1)) ~> alterRow2",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'gold',",
+				"     folderPath: 'Top_AirLine_TotalTicketCost_BusinessView',",
+				"     overwrite: true,",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     upsertable: false,",
+				"     keys:['airline_name'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sinkTotalTicketcost",
+				"alterRow2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'gold',",
+				"     folderPath: 'Total_Revenue_Genrated_By_Each_Flight_Business_View',",
+				"     overwrite: true,",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     upsertable: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sinkTotalrevenueGenratedbyEachFlight"
+			]
+		}
+	}
+}
